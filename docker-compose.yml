@@ -1,0 +1,26 @@
+version: "3"
+services:
+  nextauth-db:
+    image: postgres:15
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=username
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=nextauth-db
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=C
+    networks:
+      - nextauth-network
+
+  nextauth-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - nextauth-db
+    networks:
+      - nextauth-network
+networks:
+  nextauth-network:
