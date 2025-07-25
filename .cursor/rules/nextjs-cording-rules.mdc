@@ -1,0 +1,163 @@
+---
+description: Next.js implementation guidelines and best practices
+globs: ["*"]
+alwaysApply: true
+---
+
+## Directory Structure
+
+```
+app/
+├── layout.tsx           # Root layout
+├── page.tsx            # Home page
+├── loading.tsx         # Loading UI
+├── error.tsx           # Error UI
+├── not-found.tsx       # 404 page
+├── global-error.tsx    # Global error
+├── (dashboard)/        # Route group
+│   ├── layout.tsx
+│   └── page.tsx
+├── users/
+│   ├── layout.tsx
+│   ├── page.tsx        # /users
+│   ├── [id]/
+│   │   ├── page.tsx    # /users/[id]
+│   │   └── edit/
+│   │       └── page.tsx # /users/[id]/edit
+└── api/
+└── auth/
+└── [...nextauth]/
+└── route.ts    # API Route (avoid when possible)
+```
+
+## Database Operations
+
+### **Database Operations**
+
+- **ORM**: Use Drizzle ORM exclusively
+  - Reasons: Full TypeScript support, type safety, high performance
+  - Prohibited: Prisma, TypeORM, or other ORMs
+
+### **Server-Side Processing**
+
+- **Database Operations**: Use Server Actions
+  - Correct approach: Define Server Actions in `lib/actions.ts`
+  - Prohibited: API Routes like `/api/users/route.ts`
+  - Reasons: Type safety, automatic optimization, reduced code complexity
+
+#### Server Actions Guidelines
+
+- Avoid calling Server Actions from within other Server Actions whenever possible
+- For shared logic, implement at the database operation level (e.g., `lib/server-lib/user.ts`)
+
+### **Form Validation**
+
+- **Schema Validation**: Use Zod exclusively
+  - Use cases: Form input validation, API input validation
+  - Reasons: TypeScript integration, runtime type safety, clear error messages
+
+## Implementation Examples
+
+#### Data Fetching (Page Display)
+
+```ts
+// lib/actions.ts
+'use server'
+export async function getUsers() {
+  const users = await db.select().from(appUsers);
+  return users;
+}
+```
+
+```ts
+// src/app/users/page.tsx (Server Component)
+import { getUsers } from '@/lib/actions';
+
+export default async function UsersPage() {
+  const users = await getUsers(); // Direct call
+
+  return (
+    <div>
+      <h1>User List</h1>
+      {users.map(user => (
+        <div key={user.id}>{user.username}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+#### Form Submission (Form Action)
+
+```ts
+// lib/actions.ts
+'use server'
+import { z } from 'zod';
+
+const createUserSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  email: z.string().email('Please enter a valid email address'),
+});
+
+export async function createUser(formData: FormData) {
+  const result = createUserSchema.safeParse({
+    username: formData.get('username'),
+    email: formData.get('email'),
+  });
+
+  if (!result.success) {
+    return { error: result.error.issues[0].message };
+  }
+
+  await db.insert(appUsers).values({
+    username: result.data.username,
+    email: result.data.email,
+    isLinked: true,
+  });
+
+  return { success: true };
+}
+```
+
+```ts
+// src/app/users/create/page.tsx
+import { createUser } from '@/lib/actions';
+
+export default function CreateUserPage() {
+  return (
+    <form action={createUser}>
+      <input name="username" placeholder="Username" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <button type="submit">Create</button>
+    </form>
+  );
+}
+```
+
+#### Client-Side Operations (Using useFormState)
+
+```ts
+// src/app/users/create-client/page.tsx
+'use client';
+import { useFormState } from 'react-dom';
+import { createUser } from '@/lib/actions';
+
+export default function CreateUserClientPage() {
+  const [state, formAction] = useFormState(createUser, null);
+
+  return (
+    <form action={formAction}>
+      <input name="username" placeholder="Username" required />
+      <input name="email" type="email" placeholder="Email" required />
+      <button type="submit">Create</button>
+      
+      {state?.error && (
+        <p style={{ color: 'red' }}>{state.error}</p>
+      )}
+      {state?.success && (
+        <p style={{ color: 'green' }}>User created successfully!</p>
+      )}
+    </form>
+  );
+}
+```

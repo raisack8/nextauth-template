@@ -1,0 +1,25 @@
+---
+description: Terminal operation guidelines and troubleshooting
+globs: ["*"]
+alwaysApply: true
+---
+
+# Terminal Operation Guidelines
+
+## User Environment
+
+The user's environment is `Windows` with `GitBash` as the primary terminal.
+Due to this setup, some basic bash commands may not be available. In such cases, please use `powershell` or other alternatives.
+
+Please prioritize using `bash` terminal whenever possible.
+
+## Common Error Points
+
+- The PC does not have the `psql` command available.
+   - When database operations are needed, it's recommended to write direct test scripts to check the contents.
+- Cursor frequently fails when executing commands by prefixing `[200` at the beginning.
+   - Before terminal execution, please verify that `[200` is not included in the input before running the command.
+- When starting Node.js servers, always use port `3000`.
+   - Do not use port numbers other than `3000` such as `3001` or `3002`.
+   - If port `3000` is unavailable, check if it's already in use and execute the `kill` command to free the port if necessary.
+   - If you must use a port other than `3000` due to unavoidable circumstances, you may do so, but remember this is exceptional and return to using port `3000` thereafter.
